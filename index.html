@@ -1,251 +1,719 @@
 <!DOCTYPE html>
-<html lang="ht">
+<html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TF-Chat</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f2f2f2;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background-color: #ffffff;
-      padding: 15px;
-      text-align: center;
-      font-size: 24px;
-      font-weight: bold;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      position: relative;
-    }
-    .menu-btn {
-      position: absolute;
-      left: 15px;
-      top: 15px;
-      font-size: 24px;
-      cursor: pointer;
-    }
-    .chat-box {
-      display: flex;
-      flex-direction: column;
-      padding: 20px;
-      max-height: 80vh;
-      overflow-y: auto;
-    }
-    .user-msg, .bot-msg {
-      margin: 10px 0;
-      padding: 10px 15px;
-      border-radius: 20px;
-      max-width: 70%;
-    }
-    .user-msg {
-      background-color: #d0ecff;
-      align-self: flex-end;
-      margin-left: auto;
-    }
-    .bot-msg {
-      background-color: #ffffff;
-      border: 1px solid #ddd;
-      margin-right: auto;
-    }
-    form {
-      display: flex;
-      padding: 15px;
-      background-color: #fff;
-      border-top: 1px solid #ccc;
-    }
-    input[type="text"] {
-      flex: 1;
-      padding: 10px;
-      font-size: 16px;
-      border: 1px solid #ccc;
-      border-radius: 20px;
-      outline: none;
-    }
-    button {
-      background-color: #007bff;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      margin-left: 10px;
-      border-radius: 20px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    /* Sidebar ☰ */
-    .sidebar {
-      position: fixed;
-      top: 0;
-      left: -100%;
-      width: 80%;
-      height: 100%;
-      background: #fff;
-      z-index: 100;
-      box-shadow: 2px 0 10px rgba(0,0,0,0.2);
-      transition: left 0.3s ease;
-      padding: 20px;
-    }
-    .sidebar.active {
-      left: 0;
-    }
-    .sidebar .menu-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-    }
-    .chat-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      overflow-y: auto;
-      max-height: calc(100% - 60px);
-    }
-    .chat-list li {
-      padding: 8px;
-      border-radius: 5px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .chat-list li:hover {
-      background: #f0f0f0;
-    }
-  </style>
-</head>
-<body>
-  <header>
-    <div class="menu-btn" onclick="toggleSidebar()">☰</div>
-    TF-Chat
-  </header>
-
-  <!-- Sidebar ☰ -->
-  <div class="sidebar" id="sidebar">
-    <div class="menu-header">
-      <h3>Chats</h3>
-      <button onclick="newChat()">🆕</button>
-    </div>
-    <ul class="chat-list" id="chatList"></ul>
-  </div>
-
-  <div class="chat-box" id="chatBox"></div>
-
-  <form id="chatForm">
-    <input type="text" id="userInput" placeholder="Send a message..." autocomplete="off"/>
-    <button type="submit">➤</button>
-  </form>
-
-  <script>
-    let qaList = [];
-    let sessions = [];
-    let currentSession = null;
-
-    fetch('repons.json')
-      .then(response => response.json())
-      .then(data => {
-        qaList = data.reponses;
-      });
-
-    function normalize(text) {
-      return text.toLowerCase().replace(/[?.!,]/g, '').trim();
-    }
-
-    function getResponseFor(inputText) {
-      const normalizedInput = normalize(inputText);
-      const inputWords = normalizedInput.split(/\s+/);
-      const matchedEntries = [];
-
-      for (const entry of qaList) {
-        for (const question of entry.questions) {
-          const qNorm = normalize(question);
-          const qWords = qNorm.split(/\s+/);
-          const allPresent = qWords.every(w => inputWords.includes(w));
-          if (allPresent) {
-            matchedEntries.push(entry);
-            break;
-          }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CinéVision - Films Gratuits en Streaming</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom CSS for things Tailwind can't easily do */
+        .movie-card:hover .movie-overlay {
+            opacity: 1;
         }
-      }
+        
+        .movie-overlay {
+            transition: all 0.3s ease;
+            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
+        }
+        
+        .author-card:hover .author-social {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .author-social {
+            transition: all 0.3s ease;
+            transform: translateY(10px);
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #4f46e5;
+            border-radius: 4px;
+        }
+        
+        /* Animation for loading */
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+        
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-gray-800 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex flex-col md:flex-row items-center justify-between">
+            <div class="flex items-center mb-4 md:mb-0">
+                <a href="#" class="flex items-center">
+                    <i class="fas fa-film text-indigo-500 text-2xl mr-2"></i>
+                    <span class="text-xl font-bold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">CinéVision</span>
+                </a>
+            </div>
+            
+            <div class="relative w-full md:w-1/3">
+                <input type="text" placeholder="Rechercher un film, série ou réalisateur..." 
+                       class="w-full bg-gray-700 rounded-full py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+            </div>
+            
+            <nav class="hidden md:flex space-x-6">
+                <a href="#" class="hover:text-indigo-400 transition">Accueil</a>
+                <a href="#movies" class="hover:text-indigo-400 transition">Films</a>
+                <a href="#authors" class="hover:text-indigo-400 transition">Réalisateurs</a>
+                <a href="#categories" class="hover:text-indigo-400 transition">Catégories</a>
+            </nav>
+            
+            <div class="flex items-center space-x-4 mt-4 md:mt-0">
+                <button class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-full transition">
+                    <i class="fas fa-user-plus mr-2"></i>S'inscrire
+                </button>
+                <button class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-full transition">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Connexion
+                </button>
+            </div>
+        </div>
+    </header>
 
-      if (matchedEntries.length > 0) {
-        const entry = matchedEntries[Math.floor(Math.random() * matchedEntries.length)];
-        return entry.reponses[Math.floor(Math.random() * entry.reponses.length)];
-      }
+    <!-- Hero Section -->
+    <section class="relative h-96 md:h-screen max-h-screen overflow-hidden">
+        <div class="absolute inset-0 bg-black opacity-50 z-10"></div>
+        <img src="https://source.unsplash.com/random/1920x1080/?movie,theater" alt="Cinema" class="w-full h-full object-cover">
+        
+        <div class="absolute inset-0 flex items-center z-20 px-4 md:px-16">
+            <div class="max-w-2xl">
+                <h1 class="text-4xl md:text-6xl font-bold mb-4">Regardez les meilleurs films gratuitement</h1>
+                <p class="text-lg md:text-xl mb-8">Des milliers de films et séries en streaming HD sans publicité. Découvrez notre catalogue impressionnant.</p>
+                <div class="flex flex-wrap gap-4">
+                    <button class="bg-indigo-600 hover:bg-indigo-700 px-6 py-3 rounded-full text-lg font-semibold transition flex items-center">
+                        <i class="fas fa-play mr-2"></i> Commencer à regarder
+                    </button>
+                    <button class="bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-full text-lg font-semibold transition flex items-center">
+                        <i class="fas fa-info-circle mr-2"></i> En savoir plus
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
 
-      return "M pa konprann sa. Eseye ankò.";
-    }
+    <!-- Featured Movies -->
+    <section id="movies" class="py-12 px-4 md:px-8 bg-gray-900">
+        <div class="container mx-auto">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold">
+                    <i class="fas fa-star text-yellow-400 mr-2"></i> Films Populaires
+                </h2>
+                <a href="#" class="text-indigo-400 hover:text-indigo-300 transition flex items-center">
+                    Voir plus <i class="fas fa-chevron-right ml-1"></i>
+                </a>
+            </div>
+            
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6" id="movies-container">
+                <!-- Movies will be loaded here by JavaScript -->
+            </div>
+        </div>
+    </section>
 
-    function renderChatList() {
-      const list = document.getElementById("chatList");
-      list.innerHTML = '';
-      sessions.forEach((session, index) => {
-        const li = document.createElement('li');
-        li.textContent = session.title;
-        li.onclick = () => {
-          currentSession = index;
-          renderChatBox();
-          toggleSidebar();
-        };
-        list.appendChild(li);
-      });
-    }
+    <!-- Categories -->
+    <section id="categories" class="py-12 px-4 md:px-8 bg-gray-800">
+        <div class="container mx-auto">
+            <h2 class="text-2xl md:text-3xl font-bold mb-8">
+                <i class="fas fa-tags text-indigo-400 mr-2"></i> Parcourir par Catégories
+            </h2>
+            
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <a href="#" class="bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition flex flex-col items-center">
+                    <i class="fas fa-heart text-red-400 text-2xl mb-2"></i>
+                    <span>Romance</span>
+                </a>
+                <a href="#" class="bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition flex flex-col items-center">
+                    <i class="fas fa-laugh-beam text-yellow-400 text-2xl mb-2"></i>
+                    <span>Comédie</span>
+                </a>
+                <a href="#" class="bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition flex flex-col items-center">
+                    <i class="fas fa-ghost text-purple-400 text-2xl mb-2"></i>
+                    <span>Horreur</span>
+                </a>
+                <a href="#" class="bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition flex flex-col items-center">
+                    <i class="fas fa-space-shuttle text-blue-400 text-2xl mb-2"></i>
+                    <span>Science-Fiction</span>
+                </a>
+                <a href="#" class="bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition flex flex-col items-center">
+                    <i class="fas fa-fighter-jet text-green-400 text-2xl mb-2"></i>
+                    <span>Action</span>
+                </a>
+                <a href="#" class="bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition flex flex-col items-center">
+                    <i class="fas fa-user-secret text-gray-400 text-2xl mb-2"></i>
+                    <span>Thriller</span>
+                </a>
+                <a href="#" class="bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition flex flex-col items-center">
+                    <i class="fas fa-magic text-pink-400 text-2xl mb-2"></i>
+                    <span>Fantasy</span>
+                </a>
+                <a href="#" class="bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition flex flex-col items-center">
+                    <i class="fas fa-music text-teal-400 text-2xl mb-2"></i>
+                    <span>Musical</span>
+                </a>
+                <a href="#" class="bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition flex flex-col items-center">
+                    <i class="fas fa-theater-masks text-orange-400 text-2xl mb-2"></i>
+                    <span>Drame</span>
+                </a>
+                <a href="#" class="bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition flex flex-col items-center">
+                    <i class="fas fa-question text-indigo-400 text-2xl mb-2"></i>
+                    <span>Mystère</span>
+                </a>
+                <a href="#" class="bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition flex flex-col items-center">
+                    <i class="fas fa-history text-amber-400 text-2xl mb-2"></i>
+                    <span>Historique</span>
+                </a>
+                <a href="#" class="bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition flex flex-col items-center">
+                    <i class="fas fa-child text-lime-400 text-2xl mb-2"></i>
+                    <span>Animation</span>
+                </a>
+            </div>
+        </div>
+    </section>
 
-    function renderChatBox() {
-      const chatBox = document.getElementById("chatBox");
-      chatBox.innerHTML = '';
-      const session = sessions[currentSession];
-      session.messages.forEach(msg => {
-        const div = document.createElement("div");
-        div.className = msg.sender === 'user' ? 'user-msg' : 'bot-msg';
-        div.textContent = msg.text;
-        chatBox.appendChild(div);
-      });
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
+    <!-- New Releases -->
+    <section class="py-12 px-4 md:px-8 bg-gray-900">
+        <div class="container mx-auto">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold">
+                    <i class="fas fa-calendar-alt text-green-400 mr-2"></i> Nouveautés
+                </h2>
+                <a href="#" class="text-indigo-400 hover:text-indigo-300 transition flex items-center">
+                    Voir plus <i class="fas fa-chevron-right ml-1"></i>
+                </a>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- New releases will be loaded here by JavaScript -->
+            </div>
+        </div>
+    </section>
 
-    function newChat() {
-      sessions.unshift({ title: "Nouveau Chat", messages: [] });
-      currentSession = 0;
-      renderChatList();
-      renderChatBox();
-      toggleSidebar();
-    }
+    <!-- Authors Section -->
+    <section id="authors" class="py-12 px-4 md:px-8 bg-gray-800">
+        <div class="container mx-auto">
+            <h2 class="text-2xl md:text-3xl font-bold mb-8">
+                <i class="fas fa-users text-purple-400 mr-2"></i> Réalisateurs Célèbres
+            </h2>
+            
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6" id="authors-container">
+                <!-- Authors will be loaded here by JavaScript -->
+            </div>
+        </div>
+    </section>
 
-    function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('active');
-    }
+    <!-- Testimonials -->
+    <section class="py-12 px-4 md:px-8 bg-gray-900">
+        <div class="container mx-auto">
+            <h2 class="text-2xl md:text-3xl font-bold mb-8 text-center">
+                <i class="fas fa-quote-left text-indigo-400 mr-2"></i> Ce que nos utilisateurs disent
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
+                    <div class="flex items-center mb-4">
+                        <img src="https://randomuser.me/api/portraits/women/32.jpg" alt="User" class="w-12 h-12 rounded-full mr-4">
+                        <div>
+                            <h4 class="font-bold">Marie Dupont</h4>
+                            <div class="flex text-yellow-400">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-gray-300">"Je suis impressionnée par la qualité des films disponibles. La plateforme est intuitive et facile à utiliser. Je recommande !"</p>
+                </div>
+                
+                <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
+                    <div class="flex items-center mb-4">
+                        <img src="https://randomuser.me/api/portraits/men/45.jpg" alt="User" class="w-12 h-12 rounded-full mr-4">
+                        <div>
+                            <h4 class="font-bold">Jean Martin</h4>
+                            <div class="flex text-yellow-400">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star-half-alt"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-gray-300">"Une excellente alternative aux plateformes payantes. La variété des genres est impressionnante et la qualité HD est au rendez-vous."</p>
+                </div>
+                
+                <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
+                    <div class="flex items-center mb-4">
+                        <img src="https://randomuser.me/api/portraits/women/68.jpg" alt="User" class="w-12 h-12 rounded-full mr-4">
+                        <div>
+                            <h4 class="font-bold">Sophie Leroy</h4>
+                            <div class="flex text-yellow-400">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-gray-300">"Je cherchais une plateforme simple pour regarder des films classiques. CinéVision a exactement ce qu'il me faut, sans publicité en plus !"</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-    document.getElementById("chatForm").addEventListener("submit", function(e) {
-      e.preventDefault();
-      const input = document.getElementById("userInput");
-      const text = input.value.trim();
-      if (text === "") return;
+    <!-- Newsletter -->
+    <section class="py-12 px-4 md:px-8 bg-indigo-900">
+        <div class="container mx-auto max-w-4xl text-center">
+            <h2 class="text-2xl md:text-3xl font-bold mb-4">
+                <i class="fas fa-envelope mr-2"></i> Restez informé
+            </h2>
+            <p class="mb-8 text-indigo-200">Abonnez-vous à notre newsletter pour recevoir les dernières nouveautés et recommandations de films directement dans votre boîte mail.</p>
+            
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <input type="email" placeholder="Votre adresse email" 
+                       class="bg-indigo-800 border border-indigo-700 rounded-full py-3 px-6 focus:outline-none focus:ring-2 focus:ring-white flex-grow max-w-md">
+                <button class="bg-white text-indigo-900 hover:bg-gray-200 font-semibold rounded-full py-3 px-8 transition">
+                    S'abonner
+                </button>
+            </div>
+        </div>
+    </section>
 
-      if (currentSession === null) {
-        sessions.unshift({ title: "Nouveau Chat", messages: [] });
-        currentSession = 0;
-        renderChatList();
-      }
+    <!-- Footer -->
+    <footer class="bg-gray-900 pt-12 pb-6 px-4 md:px-8 border-t border-gray-800">
+        <div class="container mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-film text-indigo-500 mr-2"></i> CinéVision
+                    </h3>
+                    <p class="text-gray-400">La meilleure plateforme de streaming gratuite. Des milliers de films et séries en haute qualité, sans publicité.</p>
+                    <div class="flex space-x-4 mt-4">
+                        <a href="#" class="text-gray-400 hover:text-indigo-400 transition"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-indigo-400 transition"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-indigo-400 transition"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-indigo-400 transition"><i class="fab fa-youtube"></i></a>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-bold mb-4">Navigation</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-indigo-400 transition">Accueil</a></li>
+                        <li><a href="#movies" class="text-gray-400 hover:text-indigo-400 transition">Films</a></li>
+                        <li><a href="#authors" class="text-gray-400 hover:text-indigo-400 transition">Réalisateurs</a></li>
+                        <li><a href="#categories" class="text-gray-400 hover:text-indigo-400 transition">Catégories</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-indigo-400 transition">Nouveautés</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-bold mb-4">Légal</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-indigo-400 transition">Conditions d'utilisation</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-indigo-400 transition">Politique de confidentialité</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-indigo-400 transition">DMCA</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-indigo-400 transition">Contact</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-bold mb-4">Contact</h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li class="flex items-center"><i class="fas fa-envelope mr-2"></i> contact@cinevision.com</li>
+                        <li class="flex items-center"><i class="fas fa-phone mr-2"></i> +509 32699925 </li>
+                        <li class="flex items-center"><i class="fas fa-map-marker-alt mr-2"></i> 123 Rue du Cinéma, Paris</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="pt-6 border-t border-gray-800 text-center text-gray-500">
+                <p>&copy; 2023 CinéVision. Tous droits réservés.</p>
+                <p class="text-xs mt-2">Ce site est à but éducatif seulement. Aucun film n'est réellement hébergé sur ce site.</p>
+            </div>
+        </div>
+    </footer>
 
-      const session = sessions[currentSession];
-      session.messages.push({ sender: 'user', text });
+    <!-- Video Player Modal -->
+    <div id="video-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-90 p-4">
+        <div class="relative w-full max-w-4xl">
+            <button id="close-modal" class="absolute -top-10 right-0 text-white hover:text-indigo-400 text-2xl">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="aspect-w-16 aspect-h-9">
+                <iframe id="video-frame" class="w-full h-96 md:h-[32rem]" src="" frameborder="0" allowfullscreen></iframe>
+            </div>
+            <div class="bg-gray-900 p-4">
+                <h3 id="video-title" class="text-xl font-bold mb-2"></h3>
+                <p id="video-description" class="text-gray-300"></p>
+            </div>
+        </div>
+    </div>
 
-      const response = getResponseFor(text);
-      session.messages.push({ sender: 'bot', text: response });
+    <script>
+        // Simulated API data
+        const moviesData = [
+            {
+                id: 1,
+                title: "Inception",
+                year: 2010,
+                rating: 4.8,
+                duration: "2h 28m",
+                genre: ["Sci-Fi", "Action"],
+                description: "Un voleur qui s'infiltre dans les rêves des autres est chargé de planter une idée dans l'esprit d'un PDG.",
+                image: "https://source.unsplash.com/random/300x450/?inception,movie",
+                videoUrl: "https://www.youtube.com/embed/YoHD9XEInc0"
+            },
+            {
+                id: 2,
+                title: "The Shawshank Redemption",
+                year: 1994,
+                rating: 4.9,
+                duration: "2h 22m",
+                genre: ["Drame"],
+                description: "Deux prisonniers se lient d'amitié au fil des ans, trouvant réconfort et rédemption ultime grâce à des actes de décence commune.",
+                image: "https://source.unsplash.com/random/300x450/?shawshank,redemption",
+                videoUrl: "https://www.youtube.com/embed/6hB3S9bIaco"
+            },
+            {
+                id: 3,
+                title: "The Dark Knight",
+                year: 2008,
+                rating: 4.7,
+                duration: "2h 32m",
+                genre: ["Action", "Thriller"],
+                description: "Lorsque le Joker sème le chaos à Gotham, Batman doit affronter l'un des plus grands tests psychologiques et physiques de sa capacité à lutter contre l'injustice.",
+                image: "https://source.unsplash.com/random/300x450/?dark,knight",
+                videoUrl: "https://www.youtube.com/embed/EXeTwQWrcwY"
+            },
+            {
+                id: 4,
+                title: "Pulp Fiction",
+                year: 1994,
+                rating: 4.6,
+                duration: "2h 34m",
+                genre: ["Crime", "Drame"],
+                description: "Les vies de deux hommes de main, d'un boxeur, de la femme d'un gangster et d'un couple de petits malfrats s'entrecroisent dans une histoire de crime à Los Angeles.",
+                image: "https://source.unsplash.com/random/300x450/?pulp,fiction",
+                videoUrl: "https://www.youtube.com/embed/s7EdQ4FqbhY"
+            },
+            {
+                id: 5,
+                title: "The Godfather",
+                year: 1972,
+                rating: 4.9,
+                duration: "2h 55m",
+                genre: ["Crime", "Drame"],
+                description: "Le patriarche vieillissant d'une dynastie criminelle transmet le contrôle secret de son empire criminel à son fils réticent.",
+                image: "https://source.unsplash.com/random/300x450/?godfather,movie",
+                videoUrl: "https://www.youtube.com/embed/sY1S34973zA"
+            },
+            {
+                id: 6,
+                title: "Fight Club",
+                year: 1999,
+                rating: 4.5,
+                duration: "2h 19m",
+                genre: ["Drame"],
+                description: "Un employé de bureau insomniaque et un fabricant de savon loufoque forment un club de combat souterrain qui évolue vers quelque chose de bien plus grand.",
+                image: "https://source.unsplash.com/random/300x450/?fight,club",
+                videoUrl: "https://www.youtube.com/embed/qtRKdVHc-cE"
+            },
+            {
+                id: 7,
+                title: "Forrest Gump",
+                year: 1994,
+                rating: 4.7,
+                duration: "2h 22m",
+                genre: ["Drame", "Romance"],
+                description: "Les présidences de Kennedy et Johnson, les événements du Vietnam et d'autres développements historiques se déroulent du point de vue d'un homme de l'Alabama avec un QI de 75.",
+                image: "https://source.unsplash.com/random/300x450/?forrest,gump",
+                videoUrl: "https://www.youtube.com/embed/bLvqoHBptjg"
+            },
+            {
+                id: 8,
+                title: "The Matrix",
+                year: 1999,
+                rating: 4.6,
+                duration: "2h 16m",
+                genre: ["Sci-Fi", "Action"],
+                description: "Un pirate informatique apprend d'insurgés mystérieux la vraie nature de sa réalité et son rôle dans la guerre contre ses contrôleurs.",
+                image: "https://source.unsplash.com/random/300x450/?matrix,movie",
+                videoUrl: "https://www.youtube.com/embed/vKQi3bBA1y8"
+            }
+        ];
 
-      if (session.messages.length === 2) {
-        session.title = "Nouveau Chat";
-        renderChatList();
-      } else if (session.messages.length === 4) {
-        session.title = session.messages[0].text + " | " + session.messages[1].text;
-        renderChatList();
-      }
+        const newReleasesData = [
+            {
+                id: 9,
+                title: "Dune",
+                year: 2021,
+                rating: 4.3,
+                duration: "2h 35m",
+                genre: ["Sci-Fi", "Aventure"],
+                description: "Feature adaptation of Frank Herbert's science fiction novel about the son of a noble family entrusted with the protection of the most valuable asset in the galaxy.",
+                image: "https://source.unsplash.com/random/600x400/?dune,movie",
+                videoUrl: "https://www.youtube.com/embed/8g18jFHCLXk"
+            },
+            {
+                id: 10,
+                title: "No Time to Die",
+                year: 2021,
+                rating: 4.1,
+                duration: "2h 43m",
+                genre: ["Action", "Thriller"],
+                description: "James Bond has left active service. His peace is short-lived when Felix Leiter, an old friend from the CIA, turns up asking for help.",
+                image: "https://source.unsplash.com/random/600x400/?james,bond",
+                videoUrl: "https://www.youtube.com/embed/BIhNsAtPbPI"
+            },
+            {
+                id: 11,
+                title: "The Batman",
+                year: 2022,
+                rating: 4.4,
+                duration: "2h 56m",
+                genre: ["Action", "Crime"],
+                description: "When a sadistic serial killer begins murdering key political figures in Gotham, Batman is forced to investigate the city's hidden corruption.",
+                image: "https://source.unsplash.com/random/600x400/?batman,2022",
+                videoUrl: "https://www.youtube.com/embed/mqqft2x_Aa4"
+            }
+        ];
 
-      renderChatBox();
-      input.value = "";
-    });
-  </script>
+        const authorsData = [
+            {
+                id: 1,
+                name: "Christopher Nolan",
+                birthYear: 1970,
+                nationality: "Britannique",
+                movies: ["Inception", "The Dark Knight", "Interstellar"],
+                image: "https://source.unsplash.com/random/300x450/?christopher,nolan",
+                bio: "Réalisateur, scénariste et producteur britannique connu pour ses films complexes et visuellement époustouflants."
+            },
+            {
+                id: 2,
+                name: "Quentin Tarantino",
+                birthYear: 1963,
+                nationality: "Américain",
+                movies: ["Pulp Fiction", "Kill Bill", "Django Unchained"],
+                image: "https://source.unsplash.com/random/300x450/?quentin,tarantino",
+                bio: "Réalisateur américain connu pour son style unique, ses dialogues percutants et ses scènes de violence stylisées."
+            },
+            {
+                id: 3,
+                name: "Steven Spielberg",
+                birthYear: 1946,
+                nationality: "Américain",
+                movies: ["Jurassic Park", "E.T.", "Schindler's List"],
+                image: "https://source.unsplash.com/random/300x450/?steven,spielberg",
+                bio: "L'un des réalisateurs les plus influents de l'histoire du cinéma, connu pour ses films à grand spectacle."
+            },
+            {
+                id: 4,
+                name: "Martin Scorsese",
+                birthYear: 1942,
+                nationality: "Américain",
+                movies: ["Taxi Driver", "Goodfellas", "The Wolf of Wall Street"],
+                image: "https://source.unsplash.com/random/300x450/?martin,scorsese",
+                bio: "Réalisateur américain célèbre pour ses films sur la criminalité et la vie urbaine."
+            },
+            {
+                id: 5,
+                name: "Alfred Hitchcock",
+                birthYear: 1899,
+                nationality: "Britannique",
+                movies: ["Psycho", "Vertigo", "Rear Window"],
+                image: "https://source.unsplash.com/random/300x450/?alfred,hitchcock",
+                bio: "Maître du suspense, Hitchcock a réalisé certains des films les plus influents de l'histoire du cinéma."
+            },
+            {
+                id: 6,
+                name: "Stanley Kubrick",
+                birthYear: 1928,
+                nationality: "Américain",
+                movies: ["2001: A Space Odyssey", "The Shining", "A Clockwork Orange"],
+                image: "https://source.unsplash.com/random/300x450/?stanley,kubrick",
+                bio: "Réalisateur connu pour son perfectionnisme et ses films couvrant une grande variété de genres."
+            },
+            {
+                id: 7,
+                name: "James Cameron",
+                birthYear: 1954,
+                nationality: "Canadien",
+                movies: ["Titanic", "Avatar", "Terminator 2"],
+                image: "https://source.unsplash.com/random/300x450/?james,cameron",
+                bio: "Réalisateur connu pour ses films à grand spectacle et ses innovations technologiques dans le cinéma."
+            },
+            {
+                id: 8,
+                name: "Ridley Scott",
+                birthYear: 1937,
+                nationality: "Britannique",
+                movies: ["Alien", "Blade Runner", "Gladiator"],
+                image: "https://source.unsplash.com/random/300x450/?ridley,scott",
+                bio: "Réalisateur britannique connu pour ses contributions majeures aux genres de la science-fiction et du péplum."
+            }
+        ];
+
+        // Load movies
+        const moviesContainer = document.getElementById('movies-container');
+        moviesData.forEach(movie => {
+            const movieElement = document.createElement('div');
+            movieElement.className = 'relative rounded-lg overflow-hidden group';
+            movieElement.innerHTML = `
+                <div class="relative">
+                    <img src="${movie.image}" alt="${movie.title}" class="w-full h-64 md:h-80 object-cover rounded-lg">
+                    <div class="absolute inset-0 movie-overlay opacity-0 flex flex-col justify-end p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="bg-indigo-600 text-xs px-2 py-1 rounded">${movie.year}</span>
+                            <span class="bg-yellow-500 text-xs px-2 py-1 rounded flex items-center">
+                                <i class="fas fa-star mr-1"></i> ${movie.rating}
+                            </span>
+                        </div>
+                        <h3 class="text-white font-bold">${movie.title}</h3>
+                        <p class="text-xs text-gray-300">${movie.genre.join(', ')} • ${movie.duration}</p>
+                    </div>
+                </div>
+                <button onclick="openVideoModal('${movie.title}', '${movie.description}', '${movie.videoUrl}')" 
+                        class="mt-2 w-full bg-gray-800 hover:bg-gray-700 py-2 rounded-lg transition flex items-center justify-center">
+                    <i class="fas fa-play mr-2"></i> Regarder
+                </button>
+            `;
+            moviesContainer.appendChild(movieElement);
+        });
+
+        // Load new releases
+        const newReleasesContainer = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-3.gap-8');
+        newReleasesData.forEach(movie => {
+            const movieElement = document.createElement('div');
+            movieElement.className = 'bg-gray-800 rounded-lg overflow-hidden shadow-lg';
+            movieElement.innerHTML = `
+                <img src="${movie.image}" alt="${movie.title}" class="w-full h-48 object-cover">
+                <div class="p-4">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-lg">${movie.title}</h3>
+                        <span class="bg-indigo-600 text-xs px-2 py-1 rounded">${movie.year}</span>
+                    </div>
+                    <div class="flex items-center mb-3">
+                        <span class="text-yellow-400 mr-2">
+                            <i class="fas fa-star"></i> ${movie.rating}
+                        </span>
+                        <span class="text-gray-400 text-sm">${movie.duration}</span>
+                    </div>
+                    <p class="text-gray-300 text-sm mb-4">${movie.description}</p>
+                    <div class="flex space-x-2">
+                        <button onclick="openVideoModal('${movie.title}', '${movie.description}', '${movie.videoUrl}')" 
+                                class="flex-1 bg-indigo-600 hover:bg-indigo-700 py-2 rounded transition flex items-center justify-center">
+                            <i class="fas fa-play mr-2"></i> Regarder
+                        </button>
+                        <button class="w-10 h-10 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            newReleasesContainer.appendChild(movieElement);
+        });
+
+        // Load authors
+        const authorsContainer = document.getElementById('authors-container');
+        authorsData.forEach(author => {
+            const authorElement = document.createElement('div');
+            authorElement.className = 'author-card bg-gray-700 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition';
+            authorElement.innerHTML = `
+                <div class="relative">
+                    <img src="${author.image}" alt="${author.name}" class="w-full h-64 object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-70"></div>
+                    <div class="absolute bottom-0 left-0 p-4">
+                        <h3 class="text-white font-bold text-lg">${author.name}</h3>
+                        <p class="text-gray-300 text-sm">${author.nationality} • ${author.birthYear}</p>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <p class="text-gray-300 text-sm mb-3 line-clamp-3">${author.bio}</p>
+                    <div class="flex flex-wrap gap-1 mb-3">
+                        ${author.movies.slice(0, 3).map(movie => 
+                            `<span class="bg-gray-600 text-xs px-2 py-1 rounded">${movie}</span>`
+                        ).join('')}
+                    </div>
+                    <div class="author-social opacity-0 flex justify-center space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-indigo-400 transition"><i class="fab fa-imdb"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-indigo-400 transition"><i class="fab fa-wikipedia-w"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-indigo-400 transition"><i class="fas fa-film"></i></a>
+                    </div>
+                </div>
+            `;
+            authorsContainer.appendChild(authorElement);
+        });
+
+        // Video modal functions
+        function openVideoModal(title, description, videoUrl) {
+            const modal = document.getElementById('video-modal');
+            const videoTitle = document.getElementById('video-title');
+            const videoDescription = document.getElementById('video-description');
+            const videoFrame = document.getElementById('video-frame');
+            
+            videoTitle.textContent = title;
+            videoDescription.textContent = description;
+            videoFrame.src = videoUrl;
+            
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeVideoModal() {
+            const modal = document.getElementById('video-modal');
+            const videoFrame = document.getElementById('video-frame');
+            
+            videoFrame.src = '';
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // Close modal when clicking X or outside
+        document.getElementById('close-modal').addEventListener('click', closeVideoModal);
+        document.getElementById('video-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeVideoModal();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeVideoModal();
+            }
+        });
+
+        // Simulate loading
+        setTimeout(() => {
+            document.querySelectorAll('.animate-pulse').forEach(el => {
+                el.classList.remove('animate-pulse');
+                el.classList.remove('bg-gray-700');
+            });
+        }, 2000);
+    </script>
 </body>
-</html>
+                  </html>
